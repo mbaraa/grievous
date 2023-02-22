@@ -4,7 +4,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 )
+
+var markupTagPatt = regexp.MustCompile(`<[^>]*>`)
 
 func JuiceURL(url string) ([]int, error) {
 	resp, err := http.Get(url)
@@ -29,9 +32,13 @@ func juiceNotes(reader io.ReadCloser) (freqs []int) {
 	}
 	defer reader.Close()
 
-	for _, freq := range data {
+	for _, freq := range removeMarkupTags(data) {
 		freqs = append(freqs, int(freq))
 	}
 
 	return
+}
+
+func removeMarkupTags(input []byte) []byte {
+	return markupTagPatt.ReplaceAll(input, []byte(""))
 }
