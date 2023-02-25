@@ -14,7 +14,7 @@ func JuiceURL(url string) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	return juiceNotes(resp.Body), nil
+	return juiceNotes(resp.Body)[:2000], nil
 }
 
 func JuiceFile(filePath string) ([]int, error) {

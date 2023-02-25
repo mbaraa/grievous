@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
+
+	"github.com/mbaraa/grievous/music"
 )
 
 const (
@@ -50,7 +52,15 @@ type Writer interface {
 	io.Seeker
 }
 
+func WriteWaveFileWithScale(w Writer, freqs []int, scale music.Scale) error {
+	return writeWaveFile(w, music.GetScaledFreqs(freqs, scale))
+}
+
 func WriteWaveFile(w Writer, freqs []int) error {
+	return writeWaveFile(w, freqs)
+}
+
+func writeWaveFile(w Writer, freqs []int) error {
 	// RIFF chunk descriptor
 	w.Write([]byte(ChunkId))              // chunk id
 	w.Write([]byte(ChunkSizePlaceholder)) // chunk size
