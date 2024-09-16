@@ -1,12 +1,15 @@
+use std::{error::Error, fmt::Display};
+
+#[derive(Debug)]
 pub enum AudioError {
     Hardware,
 }
 
-impl ToString for AudioError {
-    fn to_string(&self) -> String {
-        match self {
-            AudioError::Hardware => "Hardware error".to_string(),
-        }
+impl Error for AudioError {}
+
+impl Display for AudioError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 

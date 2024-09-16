@@ -9,8 +9,8 @@ extern "C" {
 
 pub struct AlsaPlayer {
     rate: u16,
-    duration: f32,
     latency: f32,
+    duration: f32,
 }
 
 impl AlsaPlayer {
@@ -22,12 +22,12 @@ impl AlsaPlayer {
         }
         Self {
             rate: 44100,
+            latency: 0.2,
             duration: 0.5,
-            latency: 0.1,
         }
     }
 
-    pub fn new(rate: u16, duration: f32, latency: f32) -> Self {
+    pub fn new(rate: u16, latency: f32, duration: f32) -> Self {
         unsafe {
             if init() != 0 {
                 panic!("{}", AudioError::Hardware.to_string());
@@ -35,17 +35,18 @@ impl AlsaPlayer {
         }
         Self {
             rate,
-            duration,
             latency,
+            duration,
         }
     }
 }
 
 impl Player for AlsaPlayer {
-    fn play_sound(&self, freqs: Vec<u16>) -> Result<(), super::player::AudioError> {
+    fn play_sound(&self, freqs: Vec<u16>) -> Result<(), AudioError> {
         unsafe {
             freqs
                 .iter()
+                // .map(|freq| (*freq + 400))
                 .map(|freq| {
                     match play_frequency_with_custom_params(
                         *freq,

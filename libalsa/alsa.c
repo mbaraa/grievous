@@ -13,9 +13,6 @@ int destroy() { return snd_pcm_close(handle); }
 
 int play_frequency_with_custom_params(u_int16_t freq, u_int16_t rate,
                                       float latency, float duration) {
-  if (latency < 2.0) {
-    latency = 2.0;
-  }
   if (latency > 150.0) {
     latency = 150.0;
   }
