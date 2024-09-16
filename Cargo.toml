@@ -1,0 +1,20 @@
+[package]
+name = "grievous"
+version = "0.1.0"
+edition = "2021"
+authors = ["Baraa Al-Masri <pub@mbaraa.com>"]
+build = "build.rs"
+description = "Named after General Grievous, where it generates noises from text files or a provided URL, just like how Grievous makes weird noises when he talks."
+license = "GPL-3.0"
+repository = "https://github.com/mbaraa/grievous"
+documentation = "http://docs.rs/alsa-sys"
+keywords = ["ALSA", "audio", "sound"]
+categories = ["multimedia::audio"]
+
+[dependencies]
+regex = "1.10.6"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+
+[build-dependencies]
+cmake = "0.1.31"
