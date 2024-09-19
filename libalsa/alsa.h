@@ -3,11 +3,9 @@
 
 #include <alsa/asoundlib.h>
 #include <math.h>
-#include <sys/types.h>
 
-extern int init();
-extern int destroy();
-extern int play_frequency_with_custom_params(u_int16_t freq, u_int16_t rate,
-                                             float latency, float duration);
+extern int init_alsa();
+extern int destroy_alsa();
+extern int play_frequency(float freq, unsigned int rate, float duration);
 
 #endif

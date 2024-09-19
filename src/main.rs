@@ -1,4 +1,5 @@
-use audio_player::{alsa, player::Player};
+use audio_player::alsa;
+use audio_player::player::{Note, Player};
 use regex::Regex;
 use reqwest;
 use std::env;
@@ -14,9 +15,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
     println!("{}", args[1]);
 
-    let player = alsa::AlsaPlayer::new(44100, 0.1, 0.20);
+    let player = alsa::AlsaPlayer::new(44100);
     let freqs = juice_url(args[1].as_str()).await?;
-    player.play_sound(freqs)?;
+    player.play_sound(
+        vec![
+            Note::new(392.00, 0.8),
+            Note::new(392.00, 0.8),
+            Note::new(440.00, 0.8),
+            Note::new(392.00, 0.8),
+            Note::new(329.63, 0.8),
+            Note::new(349.23, 0.8),
+            Note::new(392.00, 0.8),
+            Note::new(440.00, 0.8),
+            Note::new(493.88, 0.8),
+            Note::new(523.25, 0.8),
+            Note::new(587.33, 0.8),
+            Note::new(523.25, 0.8),
+            Note::new(493.88, 0.8),
+            Note::new(440.00, 0.8),
+            Note::new(392.00, 0.8),
+            Note::new(440.00, 0.8),
+            Note::new(392.00, 0.8),
+            Note::new(349.23, 0.8),
+            Note::new(329.63, 0.8),
+            Note::new(293.66, 0.8),
+        ]
+        .iter()
+        .map(|n| *n)
+        .collect(),
+    )?;
     Ok(())
 }
 
