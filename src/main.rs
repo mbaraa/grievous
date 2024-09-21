@@ -4,50 +4,40 @@ use regex::Regex;
 use reqwest;
 use std::env;
 use std::error::Error;
+use std::fmt::Display;
 
 mod audio_player;
 
+#[derive(Debug)]
+enum AppError {
+    ShortArgs,
+}
+
+impl Error for AppError {}
+
+impl Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Box<impl Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
+        return Err(Box::new(AppError::ShortArgs));
         // return Err("Not enough args".to_string());
     }
-    println!("{}", args[1]);
 
-    let player = alsa::AlsaPlayer::new(44100);
-    let freqs = juice_url(args[1].as_str()).await?;
-    player.play_sound(
-        vec![
-            Note::new(392.00, 0.8),
-            Note::new(392.00, 0.8),
-            Note::new(440.00, 0.8),
-            Note::new(392.00, 0.8),
-            Note::new(329.63, 0.8),
-            Note::new(349.23, 0.8),
-            Note::new(392.00, 0.8),
-            Note::new(440.00, 0.8),
-            Note::new(493.88, 0.8),
-            Note::new(523.25, 0.8),
-            Note::new(587.33, 0.8),
-            Note::new(523.25, 0.8),
-            Note::new(493.88, 0.8),
-            Note::new(440.00, 0.8),
-            Note::new(392.00, 0.8),
-            Note::new(440.00, 0.8),
-            Note::new(392.00, 0.8),
-            Note::new(349.23, 0.8),
-            Note::new(329.63, 0.8),
-            Note::new(293.66, 0.8),
-        ]
-        .iter()
-        .map(|n| *n)
-        .collect(),
-    )?;
+    let freqs = juice_url("file:///home/b/foo.c").await?;
+    freqs.iter().for_each(|f| {
+        println!("{}", *f);
+    });
+
     Ok(())
 }
 
-async fn juice_url(url: &str) -> Result<Vec<u16>, Box<dyn Error>> {
+async fn juice_url(url: &str) -> Result<Vec<u16>, Box<impl Error>> {
     let ml_pat = Regex::new(r"<[^>]*>").unwrap();
     let resp_body = reqwest::get(url).await?.text().await?;
     let replaced_body = ml_pat.replace_all(resp_body.as_str(), "");
