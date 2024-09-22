@@ -23,16 +23,37 @@ impl AlsaPlayer {
 }
 
 impl Player for AlsaPlayer {
-    fn play_sound(&self, freqs: Vec<Note>) -> Result<(), AudioError> {
+    fn play_sound(&self, notes: Vec<Note>) -> Result<(), AudioError> {
         unsafe {
-            freqs
+            notes
                 .iter()
-                .map(
-                    |note| match play_frequency(note.freq, self.rate, note.duration) {
+                .map(|note| {
+                    println!("{}", note.freq);
+                    match play_frequency(note.freq, self.rate, note.duration) {
                         0 => Ok(()),
                         _ => Err(AudioError::Hardware),
-                    },
-                )
+                    }
+                })
+                .collect()
+        }
+    }
+
+    fn play_sound_with_scale(
+        &self,
+        notes: Vec<Note>,
+        scale: &super::scale::Scale,
+    ) -> Result<(), AudioError> {
+        unsafe {
+            notes
+                .iter()
+                .map(|note| {
+                    let freq = scale.map_frequency(note.freq);
+                    println!("{}", freq);
+                    match play_frequency(freq, self.rate, note.duration) {
+                        0 => Ok(()),
+                        _ => Err(AudioError::Hardware),
+                    }
+                })
                 .collect()
         }
     }

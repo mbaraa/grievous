@@ -1,5 +1,6 @@
-use audio_player::alsa::{self, AlsaPlayer};
+use audio_player::alsa::AlsaPlayer;
 use audio_player::player::{AudioError, Note, Player};
+use audio_player::scale::{Scale, ScaleError};
 use regex::Regex;
 use reqwest;
 use std::error::Error;
@@ -7,6 +8,24 @@ use std::fmt::Display;
 use std::{env, fs};
 
 mod audio_player;
+
+#[tokio::main]
+async fn main() -> Result<(), AppError> {
+    let scales = Scale::load_from_file();
+    if scales.is_err() {
+        return Err(AppError::Scale(scales.err().unwrap()));
+    }
+    match get_run_mode_from_args() {
+        Ok(rm) => match rm {
+            RunMode::Play(st, scale_name) => {
+                play_from_source(st, scales.unwrap(), scale_name).await
+            }
+            RunMode::Wav(_st, _scale_name) => todo!("not implemented"),
+            RunMode::Invalid => Err(AppError::InvalidArgs),
+        },
+        Err(err) => Err(err),
+    }
+}
 
 #[derive(Debug)]
 enum AppError {
@@ -16,6 +35,7 @@ enum AppError {
     FileNotFound,
     Juicing,
     Audio(AudioError),
+    Scale(ScaleError),
 }
 
 impl Error for AppError {}
@@ -30,7 +50,7 @@ fn print_usage() {
     println!(
         "Usage of Grievous:
 
-    ; grievous [? RUN MODE] [SOURCE TYPE] [SOURCE PATH]
+    ; grievous [? RUN MODE] [SOURCE TYPE] [SOURCE PATH] [? SCALE NAME]
 
         RUN MODE: (optional) either \"play\" or \"wav\", and defaults to play
             - play: reads the input and blasts it out of a speaker.
@@ -39,10 +59,12 @@ fn print_usage() {
             - url: reads the input from a url
             - file: reads the input from a file
         SOURCE PATH: a valid url or a file path
+        SCALE NAME: (optional) either a scale from the list under \"./scales.json\", or without a scale if not specified.
 
 Examples:
     ; grievous play url https://rustup.rs
     ; grievous play file ./README.md
+    ; grievous play file ./README.md saba
 "
     );
 }
@@ -66,16 +88,16 @@ impl SourceType {
 
 #[derive(PartialEq)]
 enum RunMode {
-    Play(SourceType),
-    Wav(SourceType),
+    Play(SourceType, String),
+    Wav(SourceType, String),
     Invalid,
 }
 
 impl RunMode {
-    fn new(rm: String, st: SourceType) -> Self {
+    fn new(rm: String, st: SourceType, scale_name: String) -> Self {
         match rm.to_lowercase().as_str() {
-            "play" => Self::Play(st),
-            "wav" => Self::Wav(st),
+            "play" => Self::Play(st, scale_name),
+            "wav" => Self::Wav(st, scale_name),
             _ if st.eq(&SourceType::Invalid) => Self::Invalid,
             _ => Self::Invalid,
         }
@@ -86,13 +108,19 @@ fn get_run_mode_from_args() -> Result<RunMode, AppError> {
     let args: Vec<String> = env::args().collect();
 
     match args.len() {
-        3 => Ok(RunMode::Play(SourceType::new(
-            args[1].clone(),
-            args[2].clone(),
-        ))),
+        3 => Ok(RunMode::Play(
+            SourceType::new(args[1].clone(), args[2].clone()),
+            "".to_string(),
+        )),
         4 => Ok(RunMode::new(
             args[1].clone(),
             SourceType::new(args[2].clone(), args[3].clone()),
+            "".to_string(),
+        )),
+        5 => Ok(RunMode::new(
+            args[1].clone(),
+            SourceType::new(args[2].clone(), args[3].clone()),
+            args[4].clone(),
         )),
         _ => {
             print_usage();
@@ -101,19 +129,11 @@ fn get_run_mode_from_args() -> Result<RunMode, AppError> {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), AppError> {
-    match get_run_mode_from_args() {
-        Ok(rm) => match rm {
-            RunMode::Play(st) => play_from_source(st).await,
-            RunMode::Wav(st) => play_from_source(st).await,
-            RunMode::Invalid => Err(AppError::InvalidArgs),
-        },
-        Err(err) => Err(err),
-    }
-}
-
-async fn play_from_source(src: SourceType) -> Result<(), AppError> {
+async fn play_from_source(
+    src: SourceType,
+    scales: Vec<Scale>,
+    scale_name: String,
+) -> Result<(), AppError> {
     let freqs = match src {
         SourceType::Url(url) => juice_url(url.as_str()).await,
         SourceType::File(path) => juice_file(path.as_str()),
@@ -124,16 +144,28 @@ async fn play_from_source(src: SourceType) -> Result<(), AppError> {
     }
 
     let bitrate = 44100;
-    let note_duration = 0.9f32;
+    let note_duration = 0.69f32;
     let player = AlsaPlayer::new(bitrate);
 
-    let result = player.play_sound(
-        freqs
-            .unwrap()
-            .iter()
-            .map(|f| Note::new(*f as f32, note_duration))
-            .collect(),
-    );
+    let scale = Scale::find_scale(scales, scale_name);
+    let result = match scale {
+        Ok(scale) => player.play_sound_with_scale(
+            freqs
+                .unwrap()
+                .iter()
+                .map(|f| Note::new(*f as f32, note_duration))
+                .collect(),
+            &scale,
+        ),
+        Err(_err) => player.play_sound(
+            freqs
+                .unwrap()
+                .iter()
+                .map(|f| Note::new(*f as f32, note_duration))
+                .collect(),
+        ),
+    };
+
     if result.is_err() {
         return Err(AppError::Audio(result.err().unwrap()));
     }

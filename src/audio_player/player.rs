@@ -1,8 +1,10 @@
+use super::scale::{self, ScaleError};
 use std::{error::Error, fmt::Display};
 
 #[derive(Debug)]
 pub enum AudioError {
     Hardware,
+    Scale(ScaleError),
 }
 
 impl Error for AudioError {}
@@ -28,5 +30,10 @@ impl Note {
 impl Copy for Note {}
 
 pub trait Player {
-    fn play_sound(&self, freqs: Vec<Note>) -> Result<(), AudioError>;
+    fn play_sound(&self, notes: Vec<Note>) -> Result<(), AudioError>;
+    fn play_sound_with_scale(
+        &self,
+        notes: Vec<Note>,
+        scale: &scale::Scale,
+    ) -> Result<(), AudioError>;
 }
