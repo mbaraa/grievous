@@ -8,6 +8,7 @@ use std::fmt::Display;
 use std::{env, fs};
 
 mod audio_player;
+mod save_file;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -20,7 +21,19 @@ async fn main() -> Result<(), AppError> {
             RunMode::Play(st, scale_name) => {
                 play_from_source(st, scales.unwrap(), scale_name).await
             }
-            RunMode::Wav(_st, _scale_name) => todo!("not implemented"),
+            RunMode::Wav(_st, _scale_name) => {
+                if let SourceType::File(path) = _st {
+                    save_file::wav::write_wav_file(
+                        path.clone(),
+                        juice_file(path.as_str())
+                            .unwrap()
+                            .iter()
+                            .map(|f| Note::new(*f as f32, 0.69))
+                            .collect(),
+                    );
+                }
+                Ok(())
+            }
             RunMode::Invalid => Err(AppError::InvalidArgs),
         },
         Err(err) => Err(err),
