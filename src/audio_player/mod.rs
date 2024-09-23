@@ -1,3 +1,5 @@
-pub mod alsa;
-pub mod player;
-pub mod scale;
+mod alsa;
+mod player;
+
+pub use self::alsa::*;
+pub use self::player::*;

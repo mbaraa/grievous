@@ -1,4 +1,6 @@
-use super::player::{AudioError, Note, Player};
+use crate::music::{Note, Scale};
+
+use super::player::{AudioError, Player};
 
 #[link(name = "alsa", kind = "static")]
 extern "C" {
@@ -38,11 +40,7 @@ impl Player for AlsaPlayer {
         }
     }
 
-    fn play_sound_with_scale(
-        &self,
-        notes: Vec<Note>,
-        scale: &super::scale::Scale,
-    ) -> Result<(), AudioError> {
+    fn play_sound_with_scale(&self, notes: Vec<Note>, scale: &Scale) -> Result<(), AudioError> {
         unsafe {
             notes
                 .iter()

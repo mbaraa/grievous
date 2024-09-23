@@ -1,14 +1,17 @@
-use audio_player::alsa::AlsaPlayer;
-use audio_player::player::{AudioError, Note, Player};
-use audio_player::scale::{Scale, ScaleError};
+use audio_file::{AudioFileGenerator, SaveFileError, WavFileGenerator};
+use audio_player::AlsaPlayer;
+use audio_player::{AudioError, Player};
+use music::Note;
+use music::{Scale, ScaleError};
 use regex::Regex;
 use reqwest;
 use std::error::Error;
 use std::fmt::Display;
 use std::{env, fs};
 
+mod audio_file;
 mod audio_player;
-mod save_file;
+mod music;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -21,18 +24,8 @@ async fn main() -> Result<(), AppError> {
             RunMode::Play(st, scale_name) => {
                 play_from_source(st, scales.unwrap(), scale_name).await
             }
-            RunMode::Wav(_st, _scale_name) => {
-                if let SourceType::File(path) = _st {
-                    save_file::wav::write_wav_file(
-                        path.clone(),
-                        juice_file(path.as_str())
-                            .unwrap()
-                            .iter()
-                            .map(|f| Note::new(*f as f32, 0.69))
-                            .collect(),
-                    );
-                }
-                Ok(())
+            RunMode::Wav(st, scale_name) => {
+                generate_file_from_source(st, scales.unwrap(), scale_name).await
             }
             RunMode::Invalid => Err(AppError::InvalidArgs),
         },
@@ -49,6 +42,7 @@ enum AppError {
     Juicing,
     Audio(AudioError),
     Scale(ScaleError),
+    SaveFile(SaveFileError),
 }
 
 impl Error for AppError {}
@@ -181,6 +175,55 @@ async fn play_from_source(
 
     if result.is_err() {
         return Err(AppError::Audio(result.err().unwrap()));
+    }
+
+    Ok(())
+}
+
+async fn generate_file_from_source(
+    src: SourceType,
+    scales: Vec<Scale>,
+    scale_name: String,
+) -> Result<(), AppError> {
+    let (src_name, freqs) = match src {
+        SourceType::Url(url) => (
+            url.clone().split("//").collect::<Vec<&str>>()[1].to_string(),
+            juice_url(url.clone().as_str()).await,
+        ),
+        SourceType::File(path) => (path.clone(), juice_file(path.clone().as_str())),
+        SourceType::Invalid => ("".to_string(), Err(AppError::InvalidArgs)),
+    };
+    if freqs.is_err() {
+        return Err(AppError::Juicing);
+    }
+
+    let bitrate = 44100;
+    let note_duration = 0.69f32;
+    let generator = WavFileGenerator::new(bitrate);
+
+    let scale = Scale::find_scale(scales, scale_name);
+    let result = match scale {
+        Ok(scale) => generator.generate_with_scale(
+            src_name,
+            freqs
+                .unwrap()
+                .iter()
+                .map(|f| Note::new(*f as f32, note_duration))
+                .collect(),
+            &scale,
+        ),
+        Err(_err) => generator.generate(
+            src_name,
+            freqs
+                .unwrap()
+                .iter()
+                .map(|f| Note::new(*f as f32, note_duration))
+                .collect(),
+        ),
+    };
+
+    if result.is_err() {
+        return Err(AppError::SaveFile(result.err().unwrap()));
     }
 
     Ok(())
