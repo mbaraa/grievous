@@ -151,26 +151,22 @@ async fn play_from_source(
     }
 
     let bitrate = 44100;
-    let note_duration = 0.69f32;
+    let note_duration = 0.42f32;
     let player = AlsaPlayer::new(bitrate);
+    let notes = vec![
+        vec![Note::new(0.0, 1.69)],
+        freqs
+            .unwrap()
+            .iter()
+            .map(|f| Note::new(*f as f32, note_duration))
+            .collect(),
+    ]
+    .concat();
 
     let scale = Scale::find_scale(scales, scale_name);
     let result = match scale {
-        Ok(scale) => player.play_sound_with_scale(
-            freqs
-                .unwrap()
-                .iter()
-                .map(|f| Note::new(*f as f32, note_duration))
-                .collect(),
-            &scale,
-        ),
-        Err(_err) => player.play_sound(
-            freqs
-                .unwrap()
-                .iter()
-                .map(|f| Note::new(*f as f32, note_duration))
-                .collect(),
-        ),
+        Ok(scale) => player.play_sound_with_scale(notes, &scale),
+        Err(_err) => player.play_sound(notes),
     };
 
     if result.is_err() {
@@ -185,7 +181,7 @@ async fn generate_file_from_source(
     scales: Vec<Scale>,
     scale_name: String,
 ) -> Result<(), AppError> {
-    let (src_name, freqs) = match src {
+    let (src_name, mut freqs) = match src {
         SourceType::Url(url) => (
             url.clone().split("//").collect::<Vec<&str>>()[1].to_string(),
             juice_url(url.clone().as_str()).await,
@@ -198,28 +194,22 @@ async fn generate_file_from_source(
     }
 
     let bitrate = 44100;
-    let note_duration = 0.69f32;
+    let note_duration = 0.42f32;
     let generator = WavFileGenerator::new(bitrate);
+    let notes = vec![
+        vec![Note::new(0.0, 1.69)],
+        freqs
+            .unwrap()
+            .iter()
+            .map(|f| Note::new(*f as f32, note_duration))
+            .collect(),
+    ]
+    .concat();
 
     let scale = Scale::find_scale(scales, scale_name);
     let result = match scale {
-        Ok(scale) => generator.generate_with_scale(
-            src_name,
-            freqs
-                .unwrap()
-                .iter()
-                .map(|f| Note::new(*f as f32, note_duration))
-                .collect(),
-            &scale,
-        ),
-        Err(_err) => generator.generate(
-            src_name,
-            freqs
-                .unwrap()
-                .iter()
-                .map(|f| Note::new(*f as f32, note_duration))
-                .collect(),
-        ),
+        Ok(scale) => generator.generate_with_scale(src_name, notes, &scale),
+        Err(_err) => generator.generate(src_name, notes),
     };
 
     if result.is_err() {
