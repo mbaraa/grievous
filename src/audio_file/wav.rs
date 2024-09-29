@@ -46,53 +46,69 @@ impl AudioFileGenerator for WavFileGenerator {
 
 impl WavFileGenerator {
     fn write_wave_file(&self, file_name: String, notes: Vec<Note>) -> std::io::Result<()> {
-        const BITDEPTH: u16 = 16;
-        const CHANNELS: u16 = 1;
-        const BLOCKALIGN: u16 = BITDEPTH / 2;
-        let BYTERATE: u32 = self.rate * BITDEPTH as u32 / 8;
-        const FORMAT: u16 = 1; // WAVE_FORMAT_PCM
-        const CHUNKSIZE: u32 = 16;
+        const BIT_DEPTH: i32 = 32;
+        const CHUNK_ID: &str = "RIFF";
+        const CHUNK_SIZE_PLACEHOLDER: &str = "----";
+        const FORMAT: &str = "WAVE";
+        const SUB_CHUNK1_ID: &str = "fmt ";
+        const SUB_CHUNK1_SIZE: u32 = 16;
+        const AUDIO_FORMAT: u16 = 1;
+        const CHANNELS: u16 = 2;
+        let byte_rate: u32 = self.rate * (CHANNELS as u32) * (SUB_CHUNK1_SIZE / 8);
+        let block_align: u16 = CHANNELS * (SUB_CHUNK1_SIZE / 8) as u16;
+        let bits_per_sample: u16 = BIT_DEPTH as u16;
+        const SUB_CHUNK2_ID: &str = "data";
+        const SUB_CHUNK2_SIZE_PLACEHOLDER: &str = "----";
 
         // open file
         let mut output_file = File::create(file_name + "_grievous.wav")?;
 
         // Header
-        // - RIFF
-        output_file.write_all(&[0x52, 0x49, 0x46, 0x46])?;
-        // - ---- place holder
+        output_file.write_all(CHUNK_ID.as_bytes())?;
         let pos_cksize = output_file.stream_position()?;
-        output_file.write_all("----".as_bytes())?;
-        output_file.write_all("WAVE".as_bytes())?;
+        output_file.write_all(CHUNK_SIZE_PLACEHOLDER.as_bytes())?;
+        output_file.write_all(FORMAT.as_bytes())?;
 
         //  Format
-        output_file.write_all("fmt ".as_bytes())?;
-        output_file.write_all(&CHUNKSIZE.to_le_bytes())?;
-        output_file.write_all(&FORMAT.to_le_bytes())?;
+        output_file.write_all(SUB_CHUNK1_ID.as_bytes())?;
+        output_file.write_all(&SUB_CHUNK1_SIZE.to_le_bytes())?;
+        output_file.write_all(&AUDIO_FORMAT.to_le_bytes())?;
         output_file.write_all(&CHANNELS.to_le_bytes())?;
         output_file.write_all(&self.rate.to_le_bytes())?;
-        output_file.write_all(&BYTERATE.to_le_bytes())?;
-        output_file.write_all(&BLOCKALIGN.to_le_bytes())?;
-        output_file.write_all(&BITDEPTH.to_le_bytes())?;
+        output_file.write_all(&byte_rate.to_le_bytes())?;
+        output_file.write_all(&block_align.to_le_bytes())?;
+        output_file.write_all(&bits_per_sample.to_le_bytes())?;
 
         // Data
-        output_file.write_all("data".as_bytes())?;
+        output_file.write_all(SUB_CHUNK2_ID.as_bytes())?;
         let pos_data_placeholder = output_file.stream_position()?;
-        output_file.write_all("----".as_bytes())?;
+        output_file.write_all(SUB_CHUNK2_SIZE_PLACEHOLDER.as_bytes())?;
         let pos_data_start = output_file.stream_position()?;
 
-        notes.iter().for_each(|note| {
-            let max_amplitude = (1 << (BITDEPTH - 1)) - 1;
+        notes
+            .iter()
+            .map(|note| -> std::io::Result<()> {
+                let max_amplitude: i64 = (1 << (BIT_DEPTH - 1)) - 1;
 
-            let mut i = 0.5;
-            while i < (self.rate as f64) {
-                let amplitude = i / (self.rate as f64) * max_amplitude as f64;
-                let sample =
-                    (2.0 * (consts::PI as f64) * i * (note.freq as f64) / (self.rate as f64)).sin();
-                output_file.write_all(&((amplitude * sample) as i16).to_be_bytes());
+                let mut i = 0.5;
+                while i < (self.rate as f64) * (note.duration as f64) {
+                    let amplitude = i / (self.rate as f64) * max_amplitude as f64;
+                    let sample = (2.0 * (consts::PI as f64) * i * (note.freq as f64)
+                        / (self.rate as f64))
+                        .sin();
 
-                i += 1.0;
-            }
-        });
+                    let channel1 = amplitude * sample;
+                    let channel2 = amplitude * sample;
+
+                    output_file.write_all(&(channel1 as f32).to_le_bytes())?;
+                    output_file.write_all(&(channel2 as f32).to_le_bytes())?;
+
+                    i += 1.0;
+                }
+
+                Ok(())
+            })
+            .collect::<std::io::Result<()>>()?;
 
         let mut pos_end = output_file.stream_position()?;
 
@@ -110,6 +126,7 @@ impl WavFileGenerator {
         output_file.write_all(&chunk_size_header.to_le_bytes())?;
 
         output_file.sync_all()?;
+
         Ok(())
     }
 }
