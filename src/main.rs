@@ -3,6 +3,7 @@ use audio_player::AlsaPlayer;
 use audio_player::{AudioError, Player};
 use music::Note;
 use music::{Scale, ScaleError};
+use rand::Rng;
 use regex::Regex;
 use reqwest;
 use std::error::Error;
@@ -72,6 +73,8 @@ Examples:
     ; grievous play url https://rustup.rs
     ; grievous play file ./README.md
     ; grievous play file ./README.md saba
+    ; grievous wav url https://rustup.rs saba
+    ; grievous wav file ./README.md saba
 "
     );
 }
@@ -136,6 +139,10 @@ fn get_run_mode_from_args() -> Result<RunMode, AppError> {
     }
 }
 
+fn get_random_duration() -> f32 {
+    rand::thread_rng().gen_range(0.10..=0.69)
+}
+
 async fn play_from_source(
     src: SourceType,
     scales: Vec<Scale>,
@@ -151,14 +158,13 @@ async fn play_from_source(
     }
 
     let bitrate = 44100;
-    let note_duration = 0.42f32;
     let player = AlsaPlayer::new(bitrate);
     let notes = vec![
         vec![Note::new(0.0, 1.69)],
         freqs
             .unwrap()
             .iter()
-            .map(|f| Note::new(*f as f32, note_duration))
+            .map(|f| Note::new(*f as f32, get_random_duration()))
             .collect(),
     ]
     .concat();
@@ -181,7 +187,7 @@ async fn generate_file_from_source(
     scales: Vec<Scale>,
     scale_name: String,
 ) -> Result<(), AppError> {
-    let (src_name, mut freqs) = match src {
+    let (src_name, freqs) = match src {
         SourceType::Url(url) => (
             url.clone().split("//").collect::<Vec<&str>>()[1].to_string(),
             juice_url(url.clone().as_str()).await,
@@ -194,14 +200,13 @@ async fn generate_file_from_source(
     }
 
     let bitrate = 44100;
-    let note_duration = 0.42f32;
     let generator = WavFileGenerator::new(bitrate);
     let notes = vec![
         vec![Note::new(0.0, 1.69)],
         freqs
             .unwrap()
             .iter()
-            .map(|f| Note::new(*f as f32, note_duration))
+            .map(|f| Note::new(*f as f32, get_random_duration()))
             .collect(),
     ]
     .concat();

@@ -9,7 +9,7 @@ pub enum ScaleError {
     ScaleNotFound,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Scale {
     pub name: String,
     pub charset: HashMap<char, f32>,
@@ -45,7 +45,7 @@ impl Scale {
         if !mapped_freq.is_none() {
             return *mapped_freq.unwrap();
         }
-        let mut new_freq = ((freq as u32 - ('a' as u32) % 26) + ('a' as u32)) as f32;
+        let mut new_freq = ((freq as i32 - ('a' as i32) % 26).abs() as u32 + ('a' as u32)) as f32;
         if [0f32, 123f32].contains(&new_freq) {
             new_freq = *self.charset.get(&'a').unwrap();
         }
