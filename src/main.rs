@@ -16,18 +16,11 @@ mod music;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    let scales = Scale::load_from_file();
-    if scales.is_err() {
-        return Err(AppError::Scale(scales.err().unwrap()));
-    }
+    let scales = Scale::get_scales();
     match get_run_mode_from_args() {
         Ok(rm) => match rm {
-            RunMode::Play(st, scale_name) => {
-                play_from_source(st, scales.unwrap(), scale_name).await
-            }
-            RunMode::Wav(st, scale_name) => {
-                generate_file_from_source(st, scales.unwrap(), scale_name).await
-            }
+            RunMode::Play(st, scale_name) => play_from_source(st, scales, scale_name).await,
+            RunMode::Wav(st, scale_name) => generate_file_from_source(st, scales, scale_name).await,
             RunMode::Invalid => Err(AppError::InvalidArgs),
         },
         Err(err) => Err(err),

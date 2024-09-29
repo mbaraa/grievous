@@ -2,6 +2,8 @@ use std::{collections::HashMap, fs};
 
 use serde::Deserialize;
 
+use super::scales;
+
 #[derive(Debug)]
 pub enum ScaleError {
     ScalesFileNotFound,
@@ -16,20 +18,12 @@ pub struct Scale {
 }
 
 impl Scale {
-    pub fn load_from_file() -> Result<Vec<Scale>, ScaleError> {
-        let scales_raw = fs::read_to_string("./scales.json");
-        if scales_raw.is_err() {
-            return Err(ScaleError::ScalesFileNotFound);
-        }
-        let scales = serde_json::from_str::<Vec<Scale>>(&scales_raw.unwrap());
-        if scales.is_err() {
-            return Err(ScaleError::NoScalesAvailable);
-        }
-        let scales_unwrapped = scales.unwrap();
-        if scales_unwrapped.len() == 0 {
-            return Err(ScaleError::NoScalesAvailable);
-        }
-        Ok(scales_unwrapped)
+    pub fn new(name: String, charset: HashMap<char, f32>) -> Self {
+        Self { name, charset }
+    }
+
+    pub fn get_scales() -> Vec<Scale> {
+        scales::get_scales()
     }
 
     pub fn find_scale(scales: Vec<Scale>, name: String) -> Result<Scale, ScaleError> {
