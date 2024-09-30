@@ -4,6 +4,14 @@ Named after [General Grievous](https://starwars.fandom.com/wiki/Grievous), where
 
 # Usage:
 
+## Dependencies
+
+- cmake
+- libssl
+- alsa
+
+## Install the thing
+
 - Clone the repo
 
 ```bash

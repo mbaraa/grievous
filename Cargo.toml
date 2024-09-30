@@ -9,6 +9,7 @@ license = "GPL-3.0"
 repository = "https://github.com/mbaraa/grievous"
 keywords = ["ALSA", "audio", "sound"]
 categories = ["multimedia::audio"]
+readme = "README.md"
 
 [dependencies]
 rand = "0.8.5"
