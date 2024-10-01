@@ -6,11 +6,19 @@ Named after [General Grievous](https://starwars.fandom.com/wiki/Grievous), where
 
 ## Dependencies
 
+- rust (duh)
+- cargo (duh2)
 - cmake
 - libssl
 - alsa
 
 ## Install the thing
+
+```bash
+; cargo install grievous
+```
+
+_OR_
 
 - Clone the repo
 
